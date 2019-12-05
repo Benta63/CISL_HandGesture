@@ -12,6 +12,26 @@ As part of an undergraduate research project with the Cognitive Immersive System
   * The results we will look at is:
     * All Outside data applied to NN
 
-* Need to classify how well the algorithm does on certain types of images, e.g. Sleeves/No sleeves, no gloves vs gloves. Perhaps do some type of statistical tests??
+* Need to classify how well the algorithm does on certain types of images, e.g. Sleeves/No sleeves, no gloves vs gloves. Perhaps do some type of statistical tests?
+
+## Python Packages Used
+
+* numpy
+ * 1.17.3
+* pandas
+ * 0.25.3
+* pytorch
+ * 1.0.1
+* opencv
+ * 3.4.2
+* scikit-image
+ * 0.15.0
+* scikit-learn
+ * 0.21.3
+* torchvision
+ * 0.2.2
+* matplotlib
+ * 3.1.1
+* Maybe more. idk
 
 
