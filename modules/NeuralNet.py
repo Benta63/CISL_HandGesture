@@ -1,72 +1,206 @@
 #Handles the neural networks. We are building a convolution Neural Network using PyTorch
 from __future__ import print_function, division
 import os
+import argparse
 import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.optim import Adam, SGD
 import time
 from torch.autograd import Variable
+from helper import Helper
+import HandGestureDataset
+from HandGestureDataset import *
 
 #A Convolutional Neural network for three-channel (color) images
 class ConNet(nn.Module):
 
 	def __init__(self):
-		super(Net, self).__init__()
-		#Let's keep it small at first
-		# Making a 2D convolution layer
-		self.cnn_layers = Sequential(
-			Conv2d(1, 4, kernel_size=3, stride=1, padding=1),
-			BatchNorm2d(4),
-			ReLU(inplace=True),
-			MaxPool2d(kernel_size=2, stride=2),
-			#Another layer
-			Conv2d(4, 4, kernel_size=3, stride=1, padding=1),
-			BatchNorm2d(4)
-			ReLU(inplace=True),
-			MaxPool2d(kernel_size=2, stride=2),
+		super(ConNet, self).__init__()
+		self.conv1 = nn.Conv2d(1, 32, 3, 1)
+		self.dropout1 = nn.Dropout2d(0.25)
 
-		)
-		self.linear_layers = Sequential(
-			Linear(4*7*7, 10)
-		)
-		# self.con1 = nn.Conv2d(3, 6, kernel_size=3, stride=1, padding=1)
-		# self.pool = nn.MaxPool2d(2, 2)
-		# self.con2 = nn.Conv2d(6, 16, 5)
-		# self.fc1 = nn.Linear(16*5*5, 120)
-		# self.fc2 = nn.Linear(120, 84)
-		# self.fc3 = nn.Linear(84, 10)
-
-		#Number of times to loop over the dataset
-		self.epochs = 2
+		self.pool = nn.MaxPool2d(2, 2)
+		self.conv2 = nn.Conv2d(6, 16, 5)
+		self.fc1 = nn.Linear(244*244, 120)
+		self.fc2 = nn.Linear(120, 84)
+		self.fc3 = nn.Linear(84, 10)
 
 	def forward(self, x):
-		x = self.cnn_layers(x)
-		x = x.view(x.size(0), -1)
-		x = self.linear_layers(x)
-		return x
-
-	def loss(self):
-		...
+		x = self.pool(F.relu(self.conv1(x)))
+		x = self.pool(F.relu(self.conv2(x)))
+		x = x.view(x.size(0), 244*244)
+		x = F.relu(self.fc1(x))
+		x = F.relu(self.fc2(x))
+		x = self.dropout1(x)
+		x = self.fc3(x)
+		output = F.log_softmax(x, dim=1)
+		return output
 
 	def save(self, path):
 		torch.save(self.state_dict(), path)
 
-	def train(self, epoch=self.epochs):
-		model.train()
-		tr_loss = 0
-		#Need to split data into training and validation. Where??
-		
 
-	def run(self):
-		for epoch in range(self.epochs):
-			...
+def train(model, optimizer, data_path, epoch, transforms, previous_model=None, 
+		 batch=1, shuffle=True, workers=1, seed=None, log_interval=10):
+	"""
+	model: A ConNet object
+	optimizer: A pytorch optimizer from optim class
+	data_path: the path to the images that this model will train on (String)
+	epoch: The number of epochs we run for (int)
+	transform: The different transformations we should perform on the images (List)
+	previous_model: An optional argument that is a path to a saved Network that we can load (String)
+	batch: An optional argument for the batch size (int)
+	shuffle: An optional argument to shuffle the data_loader (Boolean)
+	workers: An optional argument if we have multiple CPUs (int)
+	seed: An optional argument that sets the random seed for this run (int)
+	log_interval: An argument argument which sets the number of batches to wait before logging training status
+
+	"""
+
+	#Set the seed?
+	try:
+		#Here we try to access the previous_model, if it exists
+		if previous_model:
+			model = Helper.load(previous_model)
+	except:
+		pass
+	#Now let's set up the dataloader
+	dataset = HandGestureDataset(root_dir=data_path, transform=transforms)
+	train_loader = torch.utils.data.DataLoader(dataset, batch_size=batch, 
+				shuffle=shuffle, num_workers=workers)
+
+	model = model.double() #Always pays to make sure
+	model.train()
+	for batch_idx, (data, target) in enumerate(train_loader):
+		optimizer.zero_grad()
+		output = model(data.double())
+		loss = F.nll_loss(output, target)
+		loss.backward()
+		optimizer.step()
+		if batch_idx % log_interval == 0:
+			print("Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss:{:.6f}".format(
+				 epoch, batch_idx * len(data), len(train_loader.dataset), 
+				 100. * batch_idx / len(train_loader), loss.item()))
+
+def test(model, test_path, transforms,previous_model=None,batch=1, shuffle=False, workers=1):
+	"""
+	model: A ConNet object
+	data_path: the path to the images that this model will test with (String)
+	transform: The different transformations we should perform on the images (List)
+	previous_model: An optional argument that is a path to a saved Network that we can load (String)
+	batch: An optional argument for the batch size (int)
+	shuffle: An optional argument to shuffle the data_loader (Boolean)
+	workers: An optional argument if we have multiple CPUs (int)
+	
+
+	"""
+
+	try:
+		if previous_model:
+			model = Helper.load(previous_model)
+	except:
+		pass
+	testset = HandGestureDataset(root_dir=data_path, transform=transforms)
+	test_loader =torch.utils.data.DataLoader(testset, batch_size=batch, 
+		 shuffle=shuffle, num_workers=workers)
+	model = model.double()
+	model.eval()
+	test_loss = 0
+	correct = 0
+	with torch.no_grad():
+		for data, target in test_loader:
+			output = model(data.double())
+			test_loss += F.nll_loss(output, target, reduction='sum').item()
+			pred = output.argmax(dim=1, keepdim=True)
+			correct += pred.eq(target.view_as(pred)).sum().item()
+	test_loss /= len(test_loader.dataset)
+
+	print("\n Test set: Average Loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n".format(
+		 test_loss, correct, len(test_loader.dataset), 100. * correct / len(test_loader.dataset)))
 
 
-model = ConNet()
-optim = Adam(model.parameters(), lr=0.07)
-criterion = CrossEntropyLoss()
-print(model)
 
+	
+
+if __name__=='__main__':
+	train = pd.read_csv('training.txt', sep=",", header=None)
+	testing = pd.read_csv('testing.txt', sep=",", header=None)
+
+	#Let's make some datasets now 
+	train_dir = "C:\\Users\\Noah\\Documents\\CISL\\CISL_HandGesture\\modules\\Training"
+	test_dir = "C:\\Users\\Noah\\Documents\\CISL\\CISL_HandGesture\\modules\\Testing"
+
+	scale = Resize(256)
+	gaussian = GaussianFilter()
+	median = MedianFilter()
+	bilateral = BilateralFilter()
+	tensor = ToTensor()
+	#I need to work on binary image pre-processing
+	composed = transforms.Compose([GaussianFilter(), Resize(256), ToTensor()])
+
+
+	train_dataset = HandGestureDataset(root_dir=train_dir, transform=composed)
+	test_dataset = HandGestureDataset(root_dir=test_dir, transform=composed)
+
+	print(train_dataset[4]['image'].shape)
+	print(train_dataset[29]['image'].shape)
+
+
+	train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=0)
+	test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=4, shuffle=True, num_workers=2)
+
+
+
+	model = ConNet()
+	optimize = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+	criterion = CrossEntropyLoss()
+
+	model = model.double()
+
+	for epoch in range(5):
+		run_loss = 0.0
+		for i, data in enumerate(train_loader, 0):
+			inputs = data['image']
+			labels = data['name']
+			optimize.zero_grad()
+
+			outputs = model(inputs.double())
+			loss = criterion(outputs, labels)
+			loss.backward()
+			optimize.step()
+
+			#Statistics
+			run_loss += loss.item()
+			if i % 2000 == 1999: 
+				print('[%d, %5d] loss %.3f' % (epoch + 1, i + 1, run_loss / 2000))
+				run_loss = 0.0
+
+	print ("doneso")
+
+	model.save("C:\\Users\\Noah\\Documents\\CISL\\CISL_HandGesture\\models\\trained.pth")	
+
+
+	#We're going to test using the testing data and then train on it as well
+
+	correct = 0
+	total = 0
+
+	with torch.no_grad():
+		for data in test_loader:
+			images = data['image']
+			labels = data['name']
+			outputs = model(images.double())
+			_, predicted = torch.max(outputs.data, 1)
+			total += labels.size(0)
+			correct += (predicted == labels).sum().item()
+
+	print("Accurracy is %d %%" % (100 * correct / total))
+
+
+
+#Let's

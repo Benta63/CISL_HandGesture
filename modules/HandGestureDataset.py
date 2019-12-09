@@ -13,7 +13,9 @@ import cv2
 from sklearn.preprocessing import LabelEncoder
 import statistics
 import time
-
+from skimage.color import rgb2gray
+from scipy import ndimage
+from sklearn.cluster import KMeans
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -44,7 +46,8 @@ class HandGestureDataset(Dataset):
 			idx = idx.tolist()
 		img_name = self.all_files_with_root[idx]
 		image = io.imread(img_name)
-		sample = {'image': image, 'name': img_name}
+		img_label = self.getNumberFromName(idx)
+		sample = {'image': image, 'name': int(img_label)}
 
 		if self.transform:
 			sample = self.transform(sample)
@@ -53,7 +56,11 @@ class HandGestureDataset(Dataset):
 
 	#def init_dataset(self):
 
+	def getFullName(self, idx):
+		return self.all_file_names[idx]
 
+	def getFullNameRoot(self, idx):
+		return self.all_files_with_root[idx]
 
 	def getNumberFromName(self, idx):
 		"""This is dependent on our dataset. As we use the format NUM=#_etc for
@@ -131,18 +138,50 @@ class Resize(object):
 		height, width = image.shape[:2]
 		if isinstance(self.output_size, int):
 			if height > width:
-				new_h = self.output_size * height / width, 
+				new_h = self.output_size 
 				new_w = self.output_size
 			else:
-				new_h, new_w = self.output_size, self.output_size * width / height
+				new_h = self.output_size
+				new_w = self.output_size
 		else:
 			new_h, new_w = self.output_size
 
-		new_h, new_w = int(new_h), int(new_w)
+		try:
+			new_h = int(new_h[0])
+		except:
+			new_h = int(new_h)
+		try:
+			new_w = int(new_w[0])
+		except:
+			new_w = int(new_w)
 
-		new_img = transform.resize(image, (new_h, new_w))
+		new_img = cv2.resize(image, dsize=(new_h, new_w), interpolation=cv2.INTER_CUBIC)
 
 		return {'image': new_img, 'name': sample['name']}
+
+# class RandomCrop(object):
+# 	""" Randomly crops the image in a sample
+
+# 	Args:
+# 		output_size: Desired output size, tuple or int (if int, make a square)
+
+# 	"""
+
+# 	def __init__(self, output_size):
+# 		assert isinstance(output_size, (int, tuple))
+# 		if isinstance(output_size, int):
+# 			self.output_size = (output_size, output_size)
+# 		else:
+# 			assert len(output_size) == 2 #It's a tuple, height/width
+# 			self.output_size = output_size
+
+# 	def __call__(self, sample):
+# 		image = sample['image']
+# 		height, width = image.shape[:2]
+# 		new_h, new_w = self.output_size
+
+# 		top = np.random.randint(0, height - new_h)
+# 		left = np.
 
 
 class GaussianFilter(object):
@@ -202,6 +241,26 @@ class colorSegment(object):
 		
 		...
 
+class Cluster(object):
+	"""
+	Segments te image based on k-means clustering
+	clusters: The n_clusters arguments for KMeans function (int)
+	state: A seed for the state of the Kmeans. 
+	"""
+	def __call__(self, sample, clusters=10, state=0):
+		image2 = sample['image']
+		label = sample['name']
+		image = image2/255 #makes pixel values between 0 and 1. 255 is the max color
+		pic_n = np.reshape(image, (image.shape[0]*image.shape[1], image.shape[2]))
+		print(pic_n.shape)
+		kmeans = KMeans(n_clusters=clusters, random_state=state).fit(pic_n)
+		print("mean")
+		cluster = kmeans.cluster_centers_[kmeans.labels_]
+		output = cluster.reshape(image.shape[0], image.shape[1], image.shape[2])
+		return {'image': output, 'name': sample['name']}
+
+
+
 
 class ToTensor(object):
 	"""converts ndarrays in sample to Tensors."""
@@ -252,30 +311,33 @@ root_dir="C:\\Users\\Noah\\Documents\\CISL\\PicturesEdited"
 # wr
 
 # sys.exit()
-hand_dataset = HandGestureDataset(root_dir="C:\\Users\\Noah\\Documents\\CISL\\PicturesEdited")
-print(hand_dataset[0]['image'])
-scale = Resize(256)
-gaussian = GaussianFilter()
-median = MedianFilter()
-bilateral = BilateralFilter()
-tensor = ToTensor()
-composed = transforms.Compose([GaussianFilter(), Resize(256), ToTensor])
 
 
+def stuf():
+	hand_dataset = HandGestureDataset(root_dir="C:\\Users\\Noah\\Documents\\CISL\\PicturesEdited")
+	#print(hand_dataset[0]['image'])
+	scale = Resize(256)
+	gaussian = GaussianFilter()
+	median = MedianFilter()
+	bilateral = BilateralFilter()
+	tensor = ToTensor()
+	cluster = Cluster()
+	composed = transforms.Compose([GaussianFilter(), Cluster(),  Resize(256)])
 
+	data_set = HandGestureDataset(root_dir="C:\\Users\\Noah\\Documents\\CISL\\PicturesEdited\\", transform=composed)
+	dataset_loader = torch.utils.data.DataLoader(data_set, batch_size=4, shuffle=True, num_workers=4)
 
-data_set = HandGestureDataset(root_dir="C:\\Users\\Noah\\Documents\\CISL\\PicturesEdited\\", transform=composed)
-dataset_loader = torch.utils.data.DataLoader(data_set, batch_size=4, shuffle=True, num_workers=4)
+	out_set = HandGestureDataset(root_dir="C:\\Users\\Noah\\Documents\\CISL\\Noise_Results", )
+	fig  = plt.figure
+	sample = hand_dataset[5]
 
-# fig  = plt.figure
-# sample = hand_dataset[3]
+	for i, trans in enumerate([composed]):
+		trans_sample = trans(sample)
+		print("sampled")
 
-# for i, trans in enumerate([scale, gaussian, bilateral, composed]):
-# 	trans_sample = trans(sample)
+		ax = plt.subplot(1, 1, i+1)
+		plt.tight_layout()
+		ax.set_title(type(trans).__name__)
+		plt.imshow(trans_sample['image'])
 
-# 	ax = plt.subplot(1, 4, i+1)
-# 	plt.tight_layout()
-# 	ax.set_title(type(trans).__name__)
-# 	plt.imshow(trans_sample['image'])
-
-# plt.show()
+	plt.show()
