@@ -29,13 +29,13 @@ def main():
 		scheduler.step()
 	model.save("cnn_pre_added.pt")
 	
-	#Here we incorporate the testing data into the model to validate on the outside data
-	for epoch in range(1, epochs + 1):
-		NeuralNet.train(model, optimizer, test_path, epochs, composed)
-		scheduler.step()
-	module.save("cnn_fully_trained.pt")
-	#Here we test the accuracy on the outside data
-	NeuralNet.test(model, noise_path, composed)
+	# #Here we incorporate the testing data into the model to validate on the outside data
+	# for epoch in range(1, epochs + 1):
+	# 	NeuralNet.train(model, optimizer, test_path, epochs, composed)
+	# 	scheduler.step()
+	# module.save("cnn_fully_trained.pt")
+	# #Here we test the accuracy on the outside data
+	# NeuralNet.test(model, noise_path, composed)
 
 
 

@@ -21,24 +21,39 @@ class ConNet(nn.Module):
 
 	def __init__(self):
 		super(ConNet, self).__init__()
-		self.conv1 = nn.Conv2d(1, 32, 3, 1)
+		self.conv1 = nn.Conv2d(in_channels=3, out_channels= 32, kernel_size=3, stride=1)
+		self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
 		self.dropout1 = nn.Dropout2d(0.25)
-
-		self.pool = nn.MaxPool2d(2, 2)
-		self.conv2 = nn.Conv2d(6, 16, 5)
-		self.fc1 = nn.Linear(244*244, 120)
-		self.fc2 = nn.Linear(120, 84)
-		self.fc3 = nn.Linear(84, 10)
+		self.dropout2 = nn.Dropout2d(0.35)
+		self.fc1 = nn.Linear(3 * 244*244, 128) #The image is sized to 244X244
+		self.fc2 = nn.Linear(128, 64)
+		self.fc3 = nn.Linear(64, 5)
 
 	def forward(self, x):
+		print("Onwards!")
+		x = self.conv1(x)
+		x = F.relu(x)
+		x = self.conv2(x)
+		x = F.max_pool2d(x, 2)
+		x = self.dropout1(x)
+		x = torch.flatten(x, 1)
+		#x = x.view(x.size(0), 244*244) #Flattening
+		print("X is: ",x)
+		x = self.fc1(x)
+		print("Past 1st issue")
+		x = F.relu(x)
+		x = self.fc2(x)
+		x = F.relu(x)
+		self.dropout2(x)
 		x = self.pool(F.relu(self.conv1(x)))
 		x = self.pool(F.relu(self.conv2(x)))
 		x = x.view(x.size(0), 244*244)
 		x = F.relu(self.fc1(x))
 		x = F.relu(self.fc2(x))
-		x = self.dropout1(x)
+		x = self.dropout2(x)
 		x = self.fc3(x)
 		output = F.log_softmax(x, dim=1)
+		print("Size of X: ", x.size())
 		return output
 
 	def save(self, path):
@@ -76,9 +91,12 @@ def train(model, optimizer, data_path, epoch, transforms, previous_model=None,
 
 	model = model.double() #Always pays to make sure
 	model.train()
-	for batch_idx, (data, target) in enumerate(train_loader):
+	for batch_idx, data in enumerate(train_loader):
+		inputs = data['image']
+		target = data['name']
 		optimizer.zero_grad()
-		output = model(data.double())
+		inputs = inputs.double()
+		output = model(inputs)
 		loss = F.nll_loss(output, target)
 		loss.backward()
 		optimizer.step()
@@ -113,8 +131,12 @@ def test(model, test_path, transforms,previous_model=None,batch=1, shuffle=False
 	test_loss = 0
 	correct = 0
 	with torch.no_grad():
-		for data, target in test_loader:
-			output = model(data.double())
+		for data in test_loader:
+			inputs = data['image']
+			target = data['name']
+			inputs = inputs.double()
+			inputs = inputs.view(1, -1)
+			output = model(inputs)
 			test_loss += F.nll_loss(output, target, reduction='sum').item()
 			pred = output.argmax(dim=1, keepdim=True)
 			correct += pred.eq(target.view_as(pred)).sum().item()

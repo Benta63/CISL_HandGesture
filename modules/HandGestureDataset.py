@@ -252,9 +252,7 @@ class Cluster(object):
 		label = sample['name']
 		image = image2/255 #makes pixel values between 0 and 1. 255 is the max color
 		pic_n = np.reshape(image, (image.shape[0]*image.shape[1], image.shape[2]))
-		print(pic_n.shape)
 		kmeans = KMeans(n_clusters=clusters, random_state=state).fit(pic_n)
-		print("mean")
 		cluster = kmeans.cluster_centers_[kmeans.labels_]
 		output = cluster.reshape(image.shape[0], image.shape[1], image.shape[2])
 		return {'image': output, 'name': sample['name']}
