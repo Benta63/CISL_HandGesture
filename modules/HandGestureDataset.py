@@ -329,11 +329,11 @@ def stuf():
 	fig  = plt.figure
 	sample = hand_dataset[5]
 
-	for i, trans in enumerate([composed]):
+	for i, trans in enumerate([gaussian, cluster, composed]):
 		trans_sample = trans(sample)
 		print("sampled")
 
-		ax = plt.subplot(1, 1, i+1)
+		ax = plt.subplot(1, 4, i+1)
 		plt.tight_layout()
 		ax.set_title(type(trans).__name__)
 		plt.imshow(trans_sample['image'])
