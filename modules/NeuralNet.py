@@ -25,43 +25,32 @@ class ConNet(nn.Module):
 		self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1)
 		self.dropout1 = nn.Dropout2d(0.25)
 		self.dropout2 = nn.Dropout2d(0.35)
-		self.fc1 = nn.Linear(3 * 244*244, 128) #The image is sized to 244X244
-		self.fc2 = nn.Linear(128, 64)
-		self.fc3 = nn.Linear(64, 5)
+		self.fc1 = nn.Linear(921600, 120) #The image is sized to 244X244
+		self.fc2 = nn.Linear(120, 6)
 
 	def forward(self, x):
-		print("Onwards!")
 		x = self.conv1(x)
 		x = F.relu(x)
 		x = self.conv2(x)
 		x = F.max_pool2d(x, 2)
-		x = self.dropout1(x)
+		x - self.dropout1(x)
+
 		x = torch.flatten(x, 1)
-		#x = x.view(x.size(0), 244*244) #Flattening
-		print("X is: ",x)
 		x = self.fc1(x)
-		print("Past 1st issue")
+
 		x = F.relu(x)
-		x = self.fc2(x)
-		x = F.relu(x)
-		self.dropout2(x)
-		x = self.pool(F.relu(self.conv1(x)))
-		x = self.pool(F.relu(self.conv2(x)))
-		x = x.view(x.size(0), 244*244)
-		x = F.relu(self.fc1(x))
-		x = F.relu(self.fc2(x))
 		x = self.dropout2(x)
-		x = self.fc3(x)
+		x = self.fc2(x)
+
 		output = F.log_softmax(x, dim=1)
-		print("Size of X: ", x.size())
 		return output
 
 	def save(self, path):
 		torch.save(self.state_dict(), path)
 
-
 def train(model, optimizer, data_path, epoch, transforms, previous_model=None, 
 		 batch=1, shuffle=True, workers=1, seed=None, log_interval=10):
+	
 	"""
 	model: A ConNet object
 	optimizer: A pytorch optimizer from optim class
@@ -78,6 +67,7 @@ def train(model, optimizer, data_path, epoch, transforms, previous_model=None,
 	"""
 
 	#Set the seed?
+
 	try:
 		#Here we try to access the previous_model, if it exists
 		if previous_model:

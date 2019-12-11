@@ -22,6 +22,7 @@ def main():
 	composed = transforms.Compose([Cluster(), Resize(244), ToTensor()])
 	optimizer = optim.SGD(model.parameters(), lr=0.001, momentum =0.09)
 	scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
+	classes = ('1', '2', '3', '4', '5')
 	epochs = 1
 	for epoch in range(1, epochs + 1):
 		NeuralNet.train(model, optimizer, train_path, epochs, composed)
