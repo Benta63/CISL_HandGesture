@@ -14,20 +14,20 @@ To run the network, navigate to the `src` folder and run `main.py`. In the futur
 ## Python Packages Used
 
 * numpy
- * 1.17.3
+  * 1.17.3
 * pandas
- * 0.25.3
+  * 0.25.3
 * pytorch
- * 1.0.1
+  * 1.0.1
 * opencv
- * 3.4.2
+  * 3.4.2
 * scikit-image
- * 0.15.0
+  * 0.15.0
 * scikit-learn
- * 0.21.3
+  * 0.21.3
 * torchvision
- * 0.2.2
+  * 0.2.2
 * matplotlib
- * 3.1.1
+  * 3.1.1
 
 
