@@ -24,10 +24,17 @@ def main():
 	scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
 	classes = ('1', '2', '3', '4', '5')
 	epochs = 10
+	savefile = ""
 	for epoch in range(1, epochs + 1):
-		NeuralNet.train(model, optimizer, train_path, epochs, composed)
+		if savefile != "":
+			NeuralNet.train(model, optimizer, train_path, epoch, composed,workers=2, previous_model=savefile)
+		else:
+			NeuralNet.train(model, optimizer, train_path, epoch, composed,workers=2)
+
 		NeuralNet.test(model, test_path, composed)
 		scheduler.step()
+		savefile = "models\\cnn_step" +str(epoch) + ".pt"
+		model.save(savefile)
 	model.save("cnn_pre_added.pt")
 	
 	#Here we incorporate the testing data into the model to validate on the outside data
