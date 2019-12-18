@@ -1,18 +1,15 @@
 # CISL_HandGesture
-As part of an undergraduate research project with the Cognitive Immersive Systems Laboratory, I created (hopefully) a hand gesture recognition software
+As part of an undergraduate research project with the Cognitive Immersive Systems Laboratory, I created (hopefully) a hand gesture recognition software using a Convolutional Neural Network.
+
+##
+To run the network, navigate to the `src` folder and run `main.py`. In the future, I may add command line arguments for epochs, learning rate, etc, but for now they are local variables in `main.py`. Additionally, this rendition does not support CUDA. There is however a messy implementation with Google Colabs with CUDA support (https://colab.research.google.com/drive/1_UB02owkSjffu4JtgoZjjHy3BH8SBBwm). 
 
 ## Notes on Data
 
-* Need to Split data into training/testing/validation
-  * Training can be:
-    * All inside data with gloves
-    * Do a count. Maybe all with sleeves as well
-  * Validation can be:
-    * All inside without gloves
-  * The results we will look at is:
-    * All Outside data applied to NN
-
-* Need to classify how well the algorithm does on certain types of images, e.g. Sleeves/No sleeves, no gloves vs gloves. Perhaps do some type of statistical tests?
+* The images are split into Training, Testing and Noise_Results
+  * Training is the training data
+  * Testing are images similar to the training data
+  * Noise_Results are pictures taken outside with a diverse background
 
 ## Python Packages Used
 
@@ -32,6 +29,5 @@ As part of an undergraduate research project with the Cognitive Immersive System
  * 0.2.2
 * matplotlib
  * 3.1.1
-* Maybe more. idk
 
 
